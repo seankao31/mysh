@@ -90,8 +90,8 @@ struct command_segment* mysh_parse_command_segment(char *segment) {
     struct command_segment *cmd_seg = malloc(sizeof(struct command_segment));
     cmd_seg->args = malloc(sizeof(char*));
     cmd_seg->next = NULL;
-    cmd_seg->pid = 0;  //TODO
-    cmd_seg->pgid = 0; //TODO
+    cmd_seg->pid = 0;  // TODO
+    cmd_seg->pgid = 0; // TODO
 
     if (!cmd_seg || !cmd_seg->args) {
         fprintf(stderr, "-mysh: allocation error\n");
@@ -139,25 +139,33 @@ struct command* mysh_parse_command(char *line) {
     }
 
     while (1) {
-        if (line[position] == '\0') {
-            strncpy(buffer, line + seg_start, seg_length);
-            buffer[seg_length] = '\0';
-            struct command_segment *cmd_seg = mysh_parse_command_segment(buffer);
-            if (!cmd->root) {
-                last = cmd->root = cmd_seg;
-            }
-            else {
-                last->next = cmd_seg; // add to end of list
-                last = last->next;
-            }
-            return cmd;
-        } else if (line[position] == '|'){
-            // TODO: parse segment
-            seg_start = position + 1;
-            seg_length = 0;
+        if (line[position] != '\0' && line[position] != '|' && line[position] != '&') {
+            seg_length++;
+            position++;
+            continue;
+        }
+
+        strncpy(buffer, line + seg_start, seg_length);
+        buffer[seg_length] = '\0';
+        struct command_segment *cmd_seg = mysh_parse_command_segment(buffer);
+        if (!cmd->root) {
+            last = cmd->root = cmd_seg;
         }
         else {
-            seg_length++;
+            last->next = cmd_seg; // add to end of list
+            last = last->next;
+        }
+
+        if (line[position] == '|') {
+            seg_start = position + 1;
+            seg_length = 0;
+        } else if (line[position] == '&'){
+            cmd->mode = BACKGROUND_EXECUTION;
+            // TODO: how to check command syntax error,
+            //i.e. command following '&'
+            return cmd;
+        } else {
+            return cmd;
         }
         position++;
     }
@@ -224,7 +232,7 @@ void mysh_loop() {
         printf("mode: %d\n", command->mode);
         struct command_segment *p = command->root;
         while(p) {
-            printf("%s %s %s\n", p->args[0], p->args[1], p->args[2]);
+            printf("%s\n", p->args[0]); // TODO: how to print all args
             p = p->next;
         }
         #else
