@@ -131,14 +131,13 @@ char* mysh_read_line() {
 void mysh_print_promt() {
     /* Print "<username> in <current working directory>" */
 
-
     /* Print "mysh> " */
-
+    printf("mysh> ");
 }
 
 void mysh_print_welcome() {
     /* Print "Welcome to mysh by <student ID>!" */
-
+    printf("Welcome to mysh by Sean Kao!\n");
 }
 
 void mysh_loop() {
