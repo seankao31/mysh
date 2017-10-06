@@ -9,12 +9,13 @@
 #define COMMAND_BUFSIZE 1024
 #define TOKEN_BUFSIZE 64
 #define TOKEN_DELIMITERS " \t\r\n\a"
+#define ARGSIZE 64
 #define BACKGROUND_EXECUTION 0
 #define FOREGROUND_EXECUTION 1
 #define PIPELINE_EXECUTION 2
 
 struct command_segment {
-    char **args;   // arguments array
+    char *args[ARGSIZE];   // arguments array
     struct command_segment *next;
     pid_t pid;   // process ID
     pid_t pgid;   // process group ID
@@ -85,90 +86,43 @@ int mysh_execute_command(struct command *command) {
 
 }
 
-struct command_segment* mysh_parse_command_segment(char *segment) {
-    /* Parse command segment from a pipeline command */
-    struct command_segment *cmd_seg = malloc(sizeof(struct command_segment));
-    cmd_seg->args = malloc(sizeof(char*));
-    cmd_seg->next = NULL;
-    cmd_seg->pid = 0;  // TODO
-    cmd_seg->pgid = 0; // TODO
-
-    if (!cmd_seg || !cmd_seg->args) {
-        fprintf(stderr, "-mysh: allocation error\n");
-        exit(EXIT_FAILURE);
-    }
-
-    char *arg;
-    int argc = 0;
-    arg = strtok(segment, TOKEN_DELIMITERS);
-    while(arg) {
-        argc++;
-        cmd_seg->args = realloc(cmd_seg->args, argc * sizeof(char*));
-        cmd_seg->args[argc-1] = malloc(TOKEN_BUFSIZE * sizeof(char));
-
-        if (!cmd_seg->args || !cmd_seg->args[argc-1]) {
-            fprintf(stderr, "-mysh: allocation error\n");
-            exit(EXIT_FAILURE);
-        }
-
-        strncpy(cmd_seg->args[argc-1], arg, TOKEN_BUFSIZE);
-        arg = strtok(NULL, TOKEN_DELIMITERS);
-    }
-    return cmd_seg;
-}
-
 struct command* mysh_parse_command(char *line) {
     /* Parse line as command structure */
     struct command *cmd = malloc(sizeof(struct command));
-    struct command_segment *last = cmd->root = NULL; // last is end of list
+    struct command_segment *cur = cmd->root = malloc(sizeof(struct command_segment)); // cur is end of list
     cmd->mode = FOREGROUND_EXECUTION;
 
-    if (!cmd) {
+    if (!cmd || !cmd->root) {
         fprintf(stderr, "-mysh: allocation error\n");
         exit(EXIT_FAILURE);
     }
 
-    int position = 0;
-    int seg_start = 0;
-    int seg_length = 0;
-    char *buffer = malloc(sizeof(char) * COMMAND_BUFSIZE);
-
-    if (!buffer) {
-        fprintf(stderr, "-mysh: allocation error\n");
-        exit(EXIT_FAILURE);
-    }
-
-    while (1) {
-        if (line[position] != '\0' && line[position] != '|' && line[position] != '&') {
-            seg_length++;
-            position++;
-            continue;
-        }
-
-        strncpy(buffer, line + seg_start, seg_length);
-        buffer[seg_length] = '\0';
-        struct command_segment *cmd_seg = mysh_parse_command_segment(buffer);
-        if (!cmd->root) {
-            last = cmd->root = cmd_seg;
-        }
-        else {
-            last->next = cmd_seg; // add to end of list
-            last = last->next;
-        }
-
-        if (line[position] == '|') {
-            seg_start = position + 1;
-            seg_length = 0;
-        } else if (line[position] == '&'){
+    char *p = line;
+    while (*p != '\0') {
+        if (*p == '&') {
             cmd->mode = BACKGROUND_EXECUTION;
-            // TODO: how to check command syntax error,
-            //i.e. command following '&'
-            return cmd;
-        } else {
-            return cmd;
+            *p = '\0';
+            break;
         }
-        position++;
+        p++;
     }
+
+    char *sep = line;
+    char *segment;
+    int argc = 0;
+    segment = strsep(&sep, "|");
+    for (argc = 0; argc < ARGSIZE - 1 && (cur->args[argc] = strtok(segment, TOKEN_DELIMITERS)) != NULL; argc++)
+        segment = NULL;
+    cur->args[argc] = NULL;
+    while ((segment = strsep(&sep, "|")) != NULL) {
+        struct command_segment *cmd_seg = malloc(sizeof(struct command_segment));
+        cur = cur->next = cmd_seg;
+        for (argc = 0; argc < ARGSIZE - 1 && (cur->args[argc] = strtok(segment, TOKEN_DELIMITERS)) != NULL; argc++)
+            segment = NULL;
+        cur->args[argc] = NULL;
+    }
+    cur->next = NULL;
+    return cmd;
 }
 
 char* mysh_read_line() {
