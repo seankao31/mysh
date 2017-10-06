@@ -204,8 +204,12 @@ char* mysh_read_line() {
     }
 }
 
-void mysh_print_promt() {
+void mysh_print_prompt() {
     /* Print "<username> in <current working directory>" */
+    char username[32], cwd[PATH_BUFSIZE];
+    getlogin_r(username, sizeof(username));
+    getcwd(cwd, sizeof(cwd));
+    printf("%s in %s\n", username, cwd);
 
     /* Print "mysh> " */
     printf("mysh> ");
@@ -222,7 +226,7 @@ void mysh_loop() {
     int status = 1;
 
     do {   // an infinite loop to handle commands
-        mysh_print_promt();
+        mysh_print_prompt();
         line = mysh_read_line();   // read one line from terminal
         if (strlen(line) == 0) {
             continue;
