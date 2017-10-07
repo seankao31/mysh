@@ -224,16 +224,7 @@ void mysh_loop() {
             continue;
         }
         command = mysh_parse_command(line);   // parse line as command structure
-        #ifdef test
-        printf("mode: %d\n", command->mode);
-        struct command_segment *p = command->root;
-        while(p) {
-            printf("%s\n", p->args[0]); // TODO: how to print all args
-            p = p->next;
-        }
-        #else
         status = mysh_execute_command(command);   // execute the command
-        #endif
         free(line);
     } while (status >= 0);
 }
