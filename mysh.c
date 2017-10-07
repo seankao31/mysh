@@ -51,39 +51,67 @@ int mysh_exit() {
 
 
     /* Exit the program */
-
+    printf("Goodbye!\n");
+    // exit(EXIT_SUCCESS);
+    return 0;
 }
 
 int mysh_execute_builtin_command(struct command_segment *segment) {
     /* Match if command name (i.e. segment->args[0]) is a internal command */
+    if (strcmp(segment->args[0], "exit") == 0) {
+        if (mysh_exit() == 0) {
+            return -1;
+        }
+        else {
+            fprintf(stderr, "-mysh: exit error\n");
+        }
+    }
 
+    return 0;
 }
 
 int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int out_fd, int mode, int pgid) {
     // Check if it's a built-in command first
-    if (mysh_execute_builtin_command(segment)) {
-        return 0;
+    int status;
+    printf("executing %s...\n", segment->args[0]);
+    if (status = mysh_execute_builtin_command(segment)) {
+        return status;
     }
+    fprintf(stderr, "-mysh: command not found error\n");
 
     /* Fork a process and execute the program */
 
 }
 
 int mysh_execute_command(struct command *command) {
-    struct command_segment *cur_segment;
+    struct command_segment *cur;
+    int status = 0;
 
     // Iterate the linked list of command segment
     // If this is not a pipeline command, there is only a root segment.
-    for (cur_segment = command->root; cur_segment != NULL; cur_segment = cur_segment->next) {
+    for (cur = command->root; cur != NULL; cur = cur->next) {
         /* Create pipe if necessary */
 
 
         /* Call mysh_execute_command_segment(...) to execute command segment */
+        status = mysh_execute_command_segment(cur, 0, 1, command->mode, cur->pgid);
 
     }
 
-    /* Return status */
+    // free space
+    struct command_segment *p;
+    p = cur = command->root;
+    while (cur) {
+        cur = cur->next;
+        free(p);
+        p = cur;
+    }
+    free(command);
+    p = cur = NULL;
+    command = NULL;
 
+    /* Return status */
+    return status;
 }
 
 struct command* mysh_parse_command(char *line) {
