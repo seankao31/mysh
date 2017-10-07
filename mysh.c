@@ -67,15 +67,17 @@ int mysh_execute_builtin_command(struct command_segment *segment) {
         }
     }
 
+    return 0;
 }
 
 int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int out_fd, int mode, int pgid) {
     // Check if it's a built-in command first
     int status;
-    printf("executing %s\n", segment->args[0]);
+    printf("executing %s...\n", segment->args[0]);
     if (status = mysh_execute_builtin_command(segment)) {
         return status;
     }
+    fprintf(stderr, "-mysh: command not found error\n");
 
     /* Fork a process and execute the program */
 
