@@ -188,7 +188,7 @@ char* mysh_read_line() {
 
 void mysh_print_prompt() {
     /* Print "<username> in <current working directory>" */
-    char username[32], cwd[PATH_BUFSIZE];
+    char username[PATH_BUFSIZE], cwd[PATH_BUFSIZE];
     getlogin_r(username, sizeof(username));
     getcwd(cwd, sizeof(cwd));
     printf("%s in %s\n", username, cwd);
