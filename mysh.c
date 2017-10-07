@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <pwd.h>
 
 #define PATH_BUFSIZE 1024
 #define COMMAND_BUFSIZE 1024
@@ -189,15 +190,18 @@ char* mysh_read_line() {
 
 void mysh_print_prompt() {
     /* Print "<username> in <current working directory>" */
-    char username[PATH_BUFSIZE], cwd[PATH_BUFSIZE];
-    if (getlogin_r(username, sizeof(username))) {
-        perror("perror");
+    char cwd[PATH_BUFSIZE];
+    struct passwd *pwd;
+
+    if (!(pwd = getpwuid(getuid()))) {
+        perror("-mysh");
     }
     if (!getcwd(cwd, sizeof(cwd))) {
-        perror("perror");
+        perror("-mysh");
     }
 
-    printf("%s in %s\n", username, cwd);
+    /*printf("%s in %s\n", username, cwd);*/
+    printf("%s in %s\n", pwd->pw_name, cwd);
 
     /* Print "mysh> " */
     printf("mysh> ");
