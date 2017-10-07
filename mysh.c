@@ -30,7 +30,11 @@ struct command {
 
 int mysh_cd(char *path) {
     /* Implement cd command */
-
+    if (chdir(path) == -1) {
+        fprintf(stderr, "-mysh: cd %s: %s\n", path, strerror(errno));
+        return -1;
+    }
+    return 0;
 }
 
 int mysh_fg(pid_t pid) {
@@ -61,12 +65,17 @@ int mysh_exit() {
 int mysh_execute_builtin_command(struct command_segment *segment) {
     /* Match if command name (i.e. segment->args[0]) is a internal command */
     if (strcmp(segment->args[0], "exit") == 0) {
-        if (mysh_exit() == 0) {
-            return -1;
-        }
-        else {
+        if (mysh_exit() != 0) {
             fprintf(stderr, "-mysh: exit error\n");
+            exit(EXIT_FAILURE);
         }
+        return -1;
+    }
+    else if (strcmp(segment->args[0], "cd") == 0) {
+        if (mysh_cd(segment->args[1]) != 0) {
+            // do something
+        }
+        return 1;
     }
 
     return 0;
@@ -75,11 +84,10 @@ int mysh_execute_builtin_command(struct command_segment *segment) {
 int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int out_fd, int mode, int pgid) {
     // Check if it's a built-in command first
     int status;
-    printf("executing %s...\n", segment->args[0]);
     if (status = mysh_execute_builtin_command(segment)) {
-        return status;
+        return status; // exit is -1, other builtin command is 1
     }
-    fprintf(stderr, "-mysh: command not found error\n");
+    fprintf(stderr, "-mysh: %s: Command not found\n", segment->args[0]);
 
     /* Fork a process and execute the program */
 
@@ -172,7 +180,8 @@ char* mysh_read_line() {
         if (c == EOF || c == '\n') {    // read just one line per time
             buffer[position] = '\0';
             return buffer;
-        } else {
+        }
+        else {
             buffer[position] = c;
         }
         position++;
