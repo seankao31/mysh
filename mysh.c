@@ -4,6 +4,7 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #define PATH_BUFSIZE 1024
 #define COMMAND_BUFSIZE 1024
@@ -121,7 +122,7 @@ struct command* mysh_parse_command(char *line) {
     cmd->mode = FOREGROUND_EXECUTION;
 
     if (!cmd || !cmd->root) {
-        fprintf(stderr, "-mysh: allocation error\n");
+        perror("-mysh");
         exit(EXIT_FAILURE);
     }
 
@@ -160,7 +161,7 @@ char* mysh_read_line() {
     int c;
 
     if (!buffer) {
-        fprintf(stderr, "-mysh: allocation error\n");
+        perror("-mysh");
         exit(EXIT_FAILURE);
     }
 
@@ -179,7 +180,7 @@ char* mysh_read_line() {
             bufsize += COMMAND_BUFSIZE;
             buffer = realloc(buffer, bufsize);
             if (!buffer) {
-                fprintf(stderr, "-mysh: allocation error\n");
+                perror("-mysh");
                 exit(EXIT_FAILURE);
             }
         }
@@ -189,8 +190,13 @@ char* mysh_read_line() {
 void mysh_print_prompt() {
     /* Print "<username> in <current working directory>" */
     char username[PATH_BUFSIZE], cwd[PATH_BUFSIZE];
-    getlogin_r(username, sizeof(username));
-    getcwd(cwd, sizeof(cwd));
+    if (getlogin_r(username, sizeof(username))) {
+        perror("perror");
+    }
+    if (!getcwd(cwd, sizeof(cwd))) {
+        perror("perror");
+    }
+
     printf("%s in %s\n", username, cwd);
 
     /* Print "mysh> " */
