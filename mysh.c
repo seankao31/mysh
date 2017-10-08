@@ -82,6 +82,12 @@ int mysh_execute_builtin_command(struct command_segment *segment) {
 }
 
 int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int out_fd, int mode, int pgid) {
+    // Check if it's a null command
+    if (segment->args[0] == NULL) {
+        fprintf(stderr, "-mysh: No command specified\n");
+        return -1;
+    }
+
     // Check if it's a built-in command first
     int status;
     if (status = mysh_execute_builtin_command(segment)) {
