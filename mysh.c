@@ -87,10 +87,60 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
     if (status = mysh_execute_builtin_command(segment)) {
         return status; // exit is -1, other builtin command is 1
     }
-    fprintf(stderr, "-mysh: %s: Command not found\n", segment->args[0]);
+    /*fprintf(stderr, "-mysh: %s: Command not found\n", segment->args[0]);*/
 
     /* Fork a process and execute the program */
+    pid_t pid;
+    switch (pid = fork()) {
+        case -1:
+            perror("-mysh");
+            break;
+        case 0:
+            printf("Command executed by pid=%d", getpid());
+            if (mode == BACKGROUND_EXECUTION)
+                printf(" in background");
+            printf("\n");
 
+            dup2(in_fd, 0);
+            dup2(out_fd, 1);
+            /*
+             *if (mode == BACKGROUND_EXECUTION) {
+             *    close(0);
+             *}
+             */
+            if (in_fd != 0) {
+                close(in_fd);
+            }
+            if (out_fd != 1) {
+                close(out_fd);
+            }
+            if (execvp(segment->args[0], segment->args) == -1) {
+                if (errno == ENOENT) {
+                    fprintf(stderr, "-mysh: %s: Command not found\n", segment->args[0]);
+                }
+                else {
+                    perror("-mysh");
+                }
+                exit(EXIT_FAILURE);
+            }
+        default:
+            if (in_fd != 0) {
+                close(in_fd);
+            }
+            if (out_fd != 1) {
+                close(out_fd);
+            }
+            if (mode == BACKGROUND_EXECUTION) {
+                if (waitpid(pid, &status, WNOHANG) == -1) {
+                    perror("-mysh");
+                }
+            }
+            else if (waitpid(pid, &status, 0) == -1) {
+                perror("-mysh");
+            }
+    }
+
+    return status;
 }
 
 int mysh_execute_command(struct command *command) {
