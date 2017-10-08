@@ -54,11 +54,8 @@ int mysh_kill(pid_t pid) {
 int mysh_exit() {
     /* Release all the child processes */
 
-
-    /* Exit the program */
     printf("Goodbye!\n");
-    // exit(EXIT_SUCCESS);
-    return 0;
+    exit(EXIT_SUCCESS);
 }
 
 int mysh_execute_builtin_command(struct command_segment *segment) {
@@ -148,14 +145,22 @@ int mysh_execute_command(struct command *command) {
 
     // Iterate the linked list of command segment
     // If this is not a pipeline command, there is only a root segment.
-    for (cur = command->root; cur != NULL && cur->next != NULL; cur = cur->next) {
-        pipe(fd);
-        status = mysh_execute_command_segment(cur, in, fd[1], command->mode, cur->pgid);
-        close(fd[1]);
-        in = fd[0];
+    for (cur = command->root; cur != NULL && status != -1; cur = cur->next) {
+        if (cur->next) {
+            pipe(fd);
+            status = mysh_execute_command_segment(cur, in, fd[1], command->mode, cur->pgid);
+            close(fd[1]);
+            in = fd[0];
+        }
+        else {
+            status = mysh_execute_command_segment(cur, in, 1, command->mode, cur->pgid);
+        }
     }
-    // the last command
-    status = mysh_execute_command_segment(cur, in, 1, command->mode, cur->pgid);
+    if (status == -1) {
+        // do something
+
+        status = 0;
+    }
 
     // free space
     struct command_segment *p;
