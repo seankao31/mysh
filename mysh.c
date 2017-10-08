@@ -29,7 +29,6 @@ struct command {
 };
 
 int mysh_cd(char *path) {
-    /* Implement cd command */
     if (chdir(path) == -1) {
         fprintf(stderr, "-mysh: cd %s: %s\n", path, strerror(errno));
         return -1;
@@ -55,11 +54,8 @@ int mysh_kill(pid_t pid) {
 int mysh_exit() {
     /* Release all the child processes */
 
-
-    /* Exit the program */
     printf("Goodbye!\n");
-    // exit(EXIT_SUCCESS);
-    return 0;
+    exit(EXIT_SUCCESS);
 }
 
 int mysh_execute_builtin_command(struct command_segment *segment) {
@@ -93,7 +89,6 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
     if (status = mysh_execute_builtin_command(segment)) {
         return status; // exit is -1, other builtin command is 1
     }
-    /*fprintf(stderr, "-mysh: %s: Command not found\n", segment->args[0]);*/
 
     /* Fork a process and execute the program */
     pid_t pid;
@@ -130,12 +125,6 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
                 exit(EXIT_FAILURE);
             }
         default:
-            if (in_fd != 0) {
-                close(in_fd);
-            }
-            if (out_fd != 1) {
-                close(out_fd);
-            }
             if (mode == BACKGROUND_EXECUTION) {
                 if (waitpid(pid, &status, WNOHANG) == -1) {
                     perror("-mysh");
@@ -152,16 +141,25 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
 int mysh_execute_command(struct command *command) {
     struct command_segment *cur;
     int status = 0;
+    int in = 0, fd[2];
 
     // Iterate the linked list of command segment
     // If this is not a pipeline command, there is only a root segment.
-    for (cur = command->root; cur != NULL; cur = cur->next) {
-        /* Create pipe if necessary */
+    for (cur = command->root; cur != NULL && status != -1; cur = cur->next) {
+        if (cur->next) {
+            pipe(fd);
+            status = mysh_execute_command_segment(cur, in, fd[1], command->mode, cur->pgid);
+            close(fd[1]);
+            in = fd[0];
+        }
+        else {
+            status = mysh_execute_command_segment(cur, in, 1, command->mode, cur->pgid);
+        }
+    }
+    if (status == -1) {
+        // do something
 
-
-        /* Call mysh_execute_command_segment(...) to execute command segment */
-        status = mysh_execute_command_segment(cur, 0, 1, command->mode, cur->pgid);
-
+        status = 0;
     }
 
     // free space
@@ -176,14 +174,12 @@ int mysh_execute_command(struct command *command) {
     p = cur = NULL;
     command = NULL;
 
-    /* Return status */
     return status;
 }
 
 struct command* mysh_parse_command(char *line) {
-    /* Parse line as command structure */
     struct command *cmd = malloc(sizeof(struct command));
-    struct command_segment *cur = cmd->root = malloc(sizeof(struct command_segment)); // cur is end of list
+    struct command_segment *cur = cmd->root = malloc(sizeof(struct command_segment));
     cmd->mode = FOREGROUND_EXECUTION;
 
     if (!cmd || !cmd->root) {
@@ -265,15 +261,11 @@ void mysh_print_prompt() {
         perror("-mysh");
     }
 
-    /*printf("%s in %s\n", username, cwd);*/
     printf("%s in %s\n", pwd->pw_name, cwd);
-
-    /* Print "mysh> " */
     printf("mysh> ");
 }
 
 void mysh_print_welcome() {
-    /* Print "Welcome to mysh by <student ID>!" */
     printf("Welcome to mysh by Sean Kao!\n");
 }
 
