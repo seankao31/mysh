@@ -96,13 +96,22 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
             perror("-mysh");
             break;
         case 0:
-            printf("Command executed by pid=%d\n", getpid());
+            printf("Command executed by pid=%d", getpid());
+            if (mode == BACKGROUND_EXECUTION)
+                printf(" in background");
+            printf("\n");
+
+            dup2(in_fd, 0);
+            dup2(out_fd, 1);
+            /*
+             *if (mode == BACKGROUND_EXECUTION) {
+             *    close(0);
+             *}
+             */
             if (in_fd != 0) {
-                dup2(in_fd, 0);
                 close(in_fd);
             }
             if (out_fd != 1) {
-                dup2(out_fd, 1);
                 close(out_fd);
             }
             if (execvp(segment->args[0], segment->args) == -1) {
@@ -121,7 +130,12 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
             if (out_fd != 1) {
                 close(out_fd);
             }
-            if (waitpid(pid, &status, 0) == -1) {
+            if (mode == BACKGROUND_EXECUTION) {
+                if (waitpid(pid, &status, WNOHANG) == -1) {
+                    perror("-mysh");
+                }
+            }
+            else if (waitpid(pid, &status, 0) == -1) {
                 perror("-mysh");
             }
     }
