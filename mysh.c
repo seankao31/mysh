@@ -61,20 +61,16 @@ int mysh_exit() {
 int mysh_execute_builtin_command(struct command_segment *segment) {
     /* Match if command name (i.e. segment->args[0]) is a internal command */
     if (strcmp(segment->args[0], "exit") == 0) {
-        if (mysh_exit() != 0) {
-            fprintf(stderr, "-mysh: exit error\n");
-            exit(EXIT_FAILURE);
-        }
-        return -1;
+        mysh_exit();
     }
     else if (strcmp(segment->args[0], "cd") == 0) {
         if (mysh_cd(segment->args[1]) != 0) {
             // do something
         }
-        return 1;
+        return 0;
     }
 
-    return 0;
+    return -1;
 }
 
 int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int out_fd, int mode, int pgid) {
@@ -86,8 +82,8 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
 
     // Check if it's a built-in command first
     int status;
-    if (status = mysh_execute_builtin_command(segment)) {
-        return status; // exit is -1, other builtin command is 1
+    if ((status = mysh_execute_builtin_command(segment)) == 0) {
+        return status;
     }
 
     /* Fork a process and execute the program */
